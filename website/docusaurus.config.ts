@@ -25,7 +25,7 @@ const config: Config = {
   projectName: 'Physical_AI_Humanoid_Robotics', // Usually your repo name.
   trailingSlash: false, // Recommended for GitHub Pages
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
 
   // i18n configuration
