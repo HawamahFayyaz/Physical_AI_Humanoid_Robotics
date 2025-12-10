@@ -1,0 +1,140 @@
+/**
+ * Homepage styles for Physical AI & Humanoid Robotics
+ */
+
+.heroBanner {
+  padding: 6rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--ifm-color-primary-darker) 0%, var(--ifm-color-primary) 100%);
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 3rem 1rem;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+/* Modules Section */
+.modules {
+  padding: 4rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.sectionHeader h2 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.sectionHeader p {
+  color: var(--ifm-color-content-secondary);
+  font-size: 1.1rem;
+}
+
+.moduleCard {
+  background: var(--ifm-background-color);
+  border-radius: 12px;
+  padding: 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 24px;
+}
+
+.moduleCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.moduleEmoji {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.moduleTitle {
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.moduleDescription {
+  flex: 1;
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.moduleFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.chapterCount {
+  font-size: 0.85rem;
+  color: var(--ifm-color-content-secondary);
+  font-weight: 500;
+}
+
+.moduleLink {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+}
+
+.moduleLink:hover {
+  text-decoration: underline;
+}
+
+/* Features Section */
+.features {
+  padding: 4rem 0;
+}
+
+.feature {
+  text-align: center;
+  padding: 24px;
+}
+
+.featureIcon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.feature h3 {
+  font-size: 1.25rem;
+  margin-bottom: 12px;
+}
+
+.feature p {
+  color: var(--ifm-color-content-secondary);
+  line-height: 1.6;
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .moduleCard {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .moduleCard:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}

@@ -208,3 +208,10 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+
+## Active Technologies
+- JavaScript/TypeScript, Python 3.11 + Docusaurus 3.x, FastAPI, GitHub Actions, Node.js (001-deploy-github-pages)
+- N/A (deployment process, no persistent storage) (001-deploy-github-pages)
+
+## Recent Changes
+- 001-deploy-github-pages: Added JavaScript/TypeScript, Python 3.11 + Docusaurus 3.x, FastAPI, GitHub Actions, Node.js

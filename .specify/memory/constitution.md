@@ -1,55 +1,43 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!-- SYNC IMPACT REPORT:
+Version change: N/A → 1.0.0 (initial creation)
+Modified principles: N/A (new project)
+Added sections: All sections created for new project
+Removed sections: N/A
+Templates requiring updates: N/A (project starting)
+Follow-up TODOs: None
+-->
+# Physical AI & Humanoid Robotics Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Excellence in Content Creation
+All content, tone, layout, depth, emoji usage, mermaid diagrams, callout boxes, and writing style must be professional, exciting, and technically rigorous — identical to the highest-quality modern AI engineering books. This includes creating visually distinct "Key Takeaways" sections, "Further Reading", and "Assessment" sections with quizzes, coding exercises, or mini-projects at the end of every chapter.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Reusable Intelligence and Automation
+Maximum reuse of sub-agents and skills must be implemented, with all agents and skills placed in .claude/agents and .claude/skills for future hackathon use. Every component must be designed for reusability and exportability, supporting the goal of creating 8+ clean agents and skills in .claude/ directory.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Full-Featured Implementation (100% Bonus Features)
+100% of bonus features must be implemented: Better-Auth signup/signin with background questionnaire, per-chapter Personalize button, per-chapter Urdu translation button. No feature should be left incomplete or partially implemented.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. RAG Chatbot Excellence
+The RAG chatbot must support both full-book queries and selected-text-only queries with perfect functionality. The system must be robust, responsive, and provide accurate information retrieval across the entire book content.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Deployment Perfection
+The final site must deploy perfectly on GitHub Pages with zero errors and achieve 100/100 Lighthouse scores. All console errors must be eliminated, and the site must function flawlessly in production environment.
 
-### [PRINCIPLE_6_NAME]
+### VI. Technical Standards Compliance
+All markdown files must go into /docs/ with clean numbering (01-, 02-, etc.) and proper folder hierarchy. Docusaurus config, sidebars.js, and theme must be flawless and auto-generated. Backend must use FastAPI + Neon Serverless Postgres + Qdrant Cloud (free tier) + proper ingestion script. Code components in /src/components must be clean React + TypeScript. Every generated file must be ready to commit — no placeholders, no TODOs.
 
+## Additional Constraints and Requirements
 
-[PRINCIPLE__DESCRIPTION]
+The project must operate within strict time constraints of ≤10 hours total working time. Only free-tier services must be used to ensure cost-effectiveness. All agents and skills must be exportable for future hackathons. The backend architecture must include FastAPI, Neon Serverless Postgres, and Qdrant Cloud for vector storage. The frontend must include proper authentication, personalization, and Urdu translation capabilities.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Development Workflow and Quality Standards
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+All development must follow Spec-Driven Development (SDD) principles with proper artifact creation (spec, plan, tasks). Every user input must be recorded as a Prompt History Record (PHR). Architecturally significant decisions must be documented as Architecture Decision Records (ADRs). All code must be testable, maintainable, and production-ready. Implementation must follow the Red-Green-Refactor cycle with comprehensive testing at all levels.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices for this project. All implementation work must verify compliance with these principles. All pull requests and code reviews must ensure adherence to these standards. The project must maintain focus on delivering a complete, production-ready, GitHub Pages-deployed Docusaurus book on Physical AI & Humanoid Robotics with integrated RAG chatbot, authentication, personalization, and Urdu translation. All features must work perfectly as specified in the success criteria.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-12-09 | **Last Amended**: 2025-12-09

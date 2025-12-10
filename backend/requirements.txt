@@ -1,0 +1,30 @@
+# FastAPI and server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Vector database and embeddings
+qdrant-client>=1.7.0
+sentence-transformers>=2.2.0
+
+# Database
+asyncpg>=0.29.0
+sqlalchemy[asyncio]>=2.0.0
+
+# HTTP client
+httpx>=0.26.0
+
+# Environment and utilities
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.0
+
+# Caching
+redis>=5.0.0
+aioredis>=2.0.0
+
+# LLM integration
+groq>=0.4.0
