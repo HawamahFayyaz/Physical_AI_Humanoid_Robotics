@@ -1,188 +1,189 @@
-"""
-RAG Chat Router - Qdrant + Sentence Transformers
+"""Chat router for RAG chatbot API.
 
-Provides conversational Q&A over the Physical AI book content using:
-- Qdrant Cloud for vector storage and retrieval
-- Sentence Transformers for embedding generation
-- Context-aware response generation
+Implements:
+- POST /api/chat/query - Submit a chat query
+- POST /api/chat/stream - Submit a streaming chat query
 """
 
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, Field
-from typing import Optional, List
-import os
-import httpx
-from qdrant_client import QdrantClient
-from qdrant_client.http import models as qmodels
-from sentence_transformers import SentenceTransformer
+import logging
+import time
+import uuid
+from typing import Optional
 
-router = APIRouter()
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
-# Configuration
-QDRANT_URL = os.getenv("QDRANT_URL", "")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
-COLLECTION_NAME = "physical_ai_docs"
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+from models.schemas import (
+    ChatQueryRequest,
+    ChatQueryResponse,
+    Citation,
+    ErrorResponse,
+)
+from services.rag import process_query, process_query_stream
+from services.database import log_query
 
-# Initialize clients lazily
-_qdrant_client: Optional[QdrantClient] = None
-_embedding_model: Optional[SentenceTransformer] = None
+logger = logging.getLogger(__name__)
 
-
-def get_qdrant_client() -> QdrantClient:
-    """Get or create Qdrant client."""
-    global _qdrant_client
-    if _qdrant_client is None:
-        if not QDRANT_URL or not QDRANT_API_KEY:
-            raise HTTPException(
-                status_code=503,
-                detail="Qdrant not configured. Set QDRANT_URL and QDRANT_API_KEY."
-            )
-        _qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-    return _qdrant_client
+router = APIRouter(tags=["chat"])
 
 
-def get_embedding_model() -> SentenceTransformer:
-    """Get or create embedding model."""
-    global _embedding_model
-    if _embedding_model is None:
-        _embedding_model = SentenceTransformer(EMBEDDING_MODEL)
-    return _embedding_model
+@router.post(
+    "/query",
+    response_model=ChatQueryResponse,
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+        503: {"model": ErrorResponse, "description": "Service unavailable"},
+    },
+    summary="Submit a chat query",
+    description="Process a natural language question about the book content.",
+)
+async def chat_query(request: ChatQueryRequest) -> ChatQueryResponse:
+    """Process a chat query using the RAG pipeline.
 
+    Args:
+        request: ChatQueryRequest with query and optional context
 
-class ChatRequest(BaseModel):
-    """Chat request model."""
-    message: str = Field(..., min_length=1, max_length=2000)
-    conversation_id: Optional[str] = None
-    top_k: int = Field(default=5, ge=1, le=20)
-
-
-class ChatContext(BaseModel):
-    """Retrieved context chunk."""
-    content: str
-    source: str
-    score: float
-
-
-class ChatResponse(BaseModel):
-    """Chat response model."""
-    response: str
-    contexts: List[ChatContext]
-    conversation_id: Optional[str] = None
-
-
-async def generate_response_with_groq(
-    query: str,
-    contexts: List[ChatContext]
-) -> str:
-    """Generate response using Groq Llama 3."""
-    if not GROQ_API_KEY:
-        # Fallback: return context summary if no API key
-        context_text = "\n\n".join([c.content for c in contexts[:3]])
-        return f"Based on the documentation:\n\n{context_text}"
-
-    context_text = "\n\n---\n\n".join([
-        f"Source: {c.source}\n{c.content}" for c in contexts
-    ])
-
-    system_prompt = """You are an expert assistant for the Physical AI & Humanoid Robotics book.
-Answer questions based on the provided context from the book.
-Be accurate, helpful, and cite specific chapters when relevant.
-If the context doesn't contain enough information, say so clearly."""
-
-    user_prompt = f"""Context from the book:
-{context_text}
-
-Question: {query}
-
-Provide a helpful, accurate answer based on the context above."""
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {GROQ_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "llama-3.1-8b-instant",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "max_tokens": 1024,
-                "temperature": 0.7
-            },
-            timeout=30.0
-        )
-
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=502,
-                detail=f"LLM service error: {response.text}"
-            )
-
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
-
-
-@router.post("/query", response_model=ChatResponse)
-async def chat_query(request: ChatRequest):
+    Returns:
+        ChatQueryResponse with answer and citations
     """
-    Query the RAG system with a question about Physical AI.
+    start_time = time.time()
 
-    Returns relevant context chunks and an AI-generated response.
-    """
+    # Generate session ID if not provided
+    session_id = request.session_id or str(uuid.uuid4())
+
     try:
-        # Get embedding for the query
-        model = get_embedding_model()
-        query_embedding = model.encode(request.message).tolist()
+        # Extract context if provided
+        selected_text = None
+        source_chapter = None
+        if request.context:
+            selected_text = request.context.selected_text
+            source_chapter = request.context.source_chapter
 
-        # Search Qdrant for relevant chunks
-        client = get_qdrant_client()
-        search_results = client.search(
-            collection_name=COLLECTION_NAME,
-            query_vector=query_embedding,
-            limit=request.top_k,
-            with_payload=True
+        # Convert conversation history to dict format
+        conversation_history = None
+        if request.conversation_history:
+            conversation_history = [
+                {"role": msg.role, "content": msg.content}
+                for msg in request.conversation_history
+            ]
+
+        # Process query through RAG pipeline
+        result = await process_query(
+            query=request.query,
+            session_id=session_id,
+            selected_text=selected_text,
+            source_chapter=source_chapter,
+            conversation_history=conversation_history,
         )
 
-        # Extract contexts
-        contexts = [
-            ChatContext(
-                content=hit.payload.get("content", ""),
-                source=hit.payload.get("source", "unknown"),
-                score=hit.score
+        # Convert citations to Pydantic models
+        citations = [
+            Citation(
+                chapter=c["chapter"],
+                section=c["section"],
+                page_url=c["page_url"],
+                relevance_score=c["relevance_score"],
+                snippet=c.get("snippet"),
             )
-            for hit in search_results
+            for c in result["citations"]
         ]
 
-        # Generate response
-        response_text = await generate_response_with_groq(
-            request.message,
-            contexts
+        # Log query for analytics
+        response_time_ms = int((time.time() - start_time) * 1000)
+        try:
+            await log_query(
+                session_id=session_id,
+                query_text=request.query,
+                response_summary=result["answer"][:500] if result["answer"] else None,
+                sources_used=[c["chunk_id"] for c in result["citations"]],
+                response_time_ms=response_time_ms,
+                context_type="selection" if selected_text else "full",
+                selected_text=selected_text,
+            )
+        except Exception as e:
+            # Don't fail the request if logging fails
+            logger.warning(f"Failed to log query: {e}")
+
+        return ChatQueryResponse(
+            answer=result["answer"],
+            citations=citations,
+            processing_time_ms=response_time_ms,
+            session_id=session_id,
         )
 
-        return ChatResponse(
-            response=response_text,
-            contexts=contexts,
-            conversation_id=request.conversation_id
+    except ValueError as e:
+        logger.warning(f"Validation error: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "validation_error",
+                "message": str(e),
+            },
         )
-
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error processing query: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "internal_error",
+                "message": "An unexpected error occurred. Please try again.",
+            },
+        )
 
 
-@router.get("/health")
-async def chat_health():
-    """Check chat service health."""
-    health = {
-        "status": "healthy",
-        "qdrant_configured": bool(QDRANT_URL and QDRANT_API_KEY),
-        "groq_configured": bool(GROQ_API_KEY),
-        "embedding_model": EMBEDDING_MODEL
-    }
-    return health
+@router.post(
+    "/stream",
+    summary="Submit a streaming chat query",
+    description="Same as /query but returns Server-Sent Events for real-time response.",
+)
+async def chat_query_stream(request: ChatQueryRequest):
+    """Process a chat query with streaming response.
+
+    Args:
+        request: ChatQueryRequest with query and optional context
+
+    Returns:
+        StreamingResponse with SSE events
+    """
+    session_id = request.session_id or str(uuid.uuid4())
+
+    # Extract context if provided
+    selected_text = None
+    source_chapter = None
+    if request.context:
+        selected_text = request.context.selected_text
+        source_chapter = request.context.source_chapter
+
+    # Convert conversation history to dict format
+    conversation_history = None
+    if request.conversation_history:
+        conversation_history = [
+            {"role": msg.role, "content": msg.content}
+            for msg in request.conversation_history
+        ]
+
+    async def generate():
+        try:
+            async for event in process_query_stream(
+                query=request.query,
+                session_id=session_id,
+                selected_text=selected_text,
+                source_chapter=source_chapter,
+                conversation_history=conversation_history,
+            ):
+                yield event
+        except Exception as e:
+            logger.error(f"Streaming error: {e}")
+            yield f'event: error\ndata: {{"error": "internal_error", "message": "Stream interrupted"}}\n\n'
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
