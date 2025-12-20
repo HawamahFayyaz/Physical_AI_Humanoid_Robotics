@@ -1,0 +1,343 @@
+openapi: 3.1.0
+info:
+  title: Physical AI RAG Chatbot API
+  description: |
+    Backend API for the RAG chatbot integrated with the Physical AI & Humanoid Robotics Docusaurus book.
+    Supports natural language queries with source citations and text selection context.
+  version: 1.0.0
+  contact:
+    name: Physical AI Team
+    url: https://github.com/HawamahFayyaz/Physical_AI_Humanoid_Robotics
+
+servers:
+  - url: https://physical-ai-rag.railway.app
+    description: Production server
+  - url: http://localhost:8000
+    description: Local development
+
+tags:
+  - name: chat
+    description: Chat query endpoints
+  - name: health
+    description: Health check endpoints
+  - name: admin
+    description: Administrative endpoints (internal)
+
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      description: Returns service health status and version information
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                version: 1.0.0
+                services:
+                  qdrant: connected
+                  postgres: connected
+                  openai: connected
+
+  /api/chat/query:
+    post:
+      tags:
+        - chat
+      summary: Submit a chat query
+      description: |
+        Process a natural language question about the book content.
+        Returns an AI-generated response with source citations.
+        Supports optional text selection context for contextual queries.
+      operationId: chatQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatQueryRequest'
+            examples:
+              basic_query:
+                summary: Basic question
+                value:
+                  query: "What is inverse kinematics?"
+                  session_id: "550e8400-e29b-41d4-a716-446655440000"
+              with_context:
+                summary: Query with text selection
+                value:
+                  query: "Can you explain this in simpler terms?"
+                  session_id: "550e8400-e29b-41d4-a716-446655440000"
+                  context:
+                    selected_text: "The Jacobian matrix maps joint velocities to end-effector velocities"
+                    source_chapter: "Robot Kinematics"
+                    source_section: "Velocity Kinematics"
+              with_history:
+                summary: Follow-up question
+                value:
+                  query: "How does this relate to ROS2?"
+                  session_id: "550e8400-e29b-41d4-a716-446655440000"
+                  conversation_history:
+                    - role: user
+                      content: "What is inverse kinematics?"
+                    - role: assistant
+                      content: "Inverse kinematics is..."
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatQueryResponse'
+              example:
+                response: "**Inverse kinematics (IK)** is the mathematical process of calculating the joint parameters needed to place the end-effector at a desired position and orientation.\n\nUnlike forward kinematics which computes end-effector pose from joint angles, IK works in reverse..."
+                citations:
+                  - chunk_id: "docs/03-kinematics/inverse-kinematics.mdx#1"
+                    chapter: "Robot Kinematics"
+                    section: "Inverse Kinematics"
+                    url: "/docs/03-kinematics/inverse-kinematics"
+                    relevance_score: 0.92
+                response_time_ms: 1850
+                session_id: "550e8400-e29b-41d4-a716-446655440000"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: validation_error
+                message: "Query text is required"
+                details:
+                  field: query
+                  issue: "empty string"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: rate_limit
+                message: "Too many requests. Please wait 30 seconds."
+                retry_after: 30
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: internal_error
+                message: "An unexpected error occurred. Please try again."
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: service_unavailable
+                message: "The AI service is temporarily unavailable. Please try again in a few minutes."
+
+  /api/chat/stream:
+    post:
+      tags:
+        - chat
+      summary: Submit a streaming chat query
+      description: |
+        Same as /api/chat/query but returns a Server-Sent Events stream for real-time response display.
+        Each event contains a chunk of the response or metadata.
+      operationId: chatQueryStream
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatQueryRequest'
+      responses:
+        '200':
+          description: SSE stream of response chunks
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: |
+                event: chunk
+                data: {"content": "**Inverse kinematics"}
+
+                event: chunk
+                data: {"content": " (IK)** is the"}
+
+                event: citations
+                data: {"citations": [{"chapter": "Robot Kinematics", ...}]}
+
+                event: done
+                data: {"response_time_ms": 1850}
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall service health status
+        version:
+          type: string
+          description: API version
+        services:
+          type: object
+          properties:
+            qdrant:
+              type: string
+              enum: [connected, disconnected]
+            postgres:
+              type: string
+              enum: [connected, disconnected]
+            openai:
+              type: string
+              enum: [connected, disconnected]
+
+    ChatQueryRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The user's question
+        session_id:
+          type: string
+          format: uuid
+          description: Browser session identifier for analytics
+        context:
+          $ref: '#/components/schemas/TextSelectionContext'
+        conversation_history:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+          description: Previous messages for multi-turn context
+
+    TextSelectionContext:
+      type: object
+      required:
+        - selected_text
+      properties:
+        selected_text:
+          type: string
+          maxLength: 5000
+          description: Text the user selected before asking
+        source_chapter:
+          type: string
+          description: Chapter where text was selected
+        source_section:
+          type: string
+          description: Section where text was selected
+
+    ConversationMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          maxLength: 10000
+
+    ChatQueryResponse:
+      type: object
+      required:
+        - response
+        - citations
+        - response_time_ms
+      properties:
+        response:
+          type: string
+          description: AI-generated response in Markdown format
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        response_time_ms:
+          type: integer
+          minimum: 0
+          description: Total response time in milliseconds
+        session_id:
+          type: string
+          description: Session identifier (echoed back)
+
+    Citation:
+      type: object
+      required:
+        - chunk_id
+        - chapter
+        - section
+        - url
+      properties:
+        chunk_id:
+          type: string
+          description: Reference to the source chunk
+        chapter:
+          type: string
+          description: Chapter name for display
+        section:
+          type: string
+          description: Section name for display
+        url:
+          type: string
+          description: Docusaurus navigation URL
+        relevance_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Similarity score (0-1)
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          enum:
+            - validation_error
+            - rate_limit
+            - internal_error
+            - service_unavailable
+            - not_found
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+        retry_after:
+          type: integer
+          description: Seconds to wait before retrying (for rate limits)
+
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Optional API key for admin endpoints
+
+security: []  # Public API, no auth required for chat endpoints

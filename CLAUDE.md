@@ -212,6 +212,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 ## Active Technologies
 - JavaScript/TypeScript, Python 3.11 + Docusaurus 3.x, FastAPI, GitHub Actions, Node.js (001-deploy-github-pages)
 - N/A (deployment process, no persistent storage) (001-deploy-github-pages)
+- Python 3.11+ (backend), TypeScript (frontend) + FastAPI, OpenAI SDK, qdrant-client, asyncpg, React, Docusaurus 3.x (002-rag-chatbot)
+- Qdrant Cloud (vectors), Neon Serverless Postgres (logs/metadata) (002-rag-chatbot)
 
 ## Recent Changes
 - 001-deploy-github-pages: Added JavaScript/TypeScript, Python 3.11 + Docusaurus 3.x, FastAPI, GitHub Actions, Node.js
